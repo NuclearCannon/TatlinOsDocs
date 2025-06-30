@@ -192,7 +192,25 @@ pub enum Interrupt {
 
 ## devices
 
-TODO
+riscv64 中的 VirtIO 设备使用 MMIO 传输方式，通过固定地址（0x10001000）访问设备，而 loongarch64 架构需要使用 VirtIO PCI 传输方式。
+
+loongarch64 下的 VirtIO 块设备需要通过 ECAM 进行 PCI 配置，ECAM 基址为 0x20000000。主要步骤包括：
+
+1. 通过遍历 PCI 总线发现 VirtIO 设备（vendor_id=0x1af4, device_id=0x1001）
+4. 为 BAR（Base Address Register）分配物理地址空间
+5. 调用 VirtIO devices 提供的函数，创建 PciTransport 实例并初始化 VirtIO 设备
+
+为了保持统一的接口，两个架构通过条件编译使用不同的设备实现类型：
+
+```rust
+#[cfg(feature = "riscv64")]
+pub type BlockDeviceImpl = VirtIoBlkDev<VirtIoHalCMAImpl>;
+
+#[cfg(feature = "loongarch64")]
+pub type BlockDeviceImpl = VirtIoBlkDev2<VirtIoHalCMAImpl>;
+```
+
+两种实现都提供相同的 BlockDriver 接口，确保上层代码无需感知底层传输方式的差异。
 
 ## 其他工作
 
